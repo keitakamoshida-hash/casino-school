@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {deck,bj,baccarat,rank,rouletteReturn,tokyoDate,randomInt} from './engine.js';
+const c=(r,s=0)=>({r,s});
+test('shuffle preserves unique cards and multi-deck counts',()=>{for(let i=0;i<20;i++){const d=deck();assert.equal(d.length,52);assert.equal(new Set(d.map(c=>`${c.r}:${c.s}`)).size,52);}assert.equal(deck(6).length,312);});
+test('random bounds and validation',()=>{for(let i=0;i<1000;i++)assert.ok(randomInt(37)>=0&&randomInt(37)<37);assert.throws(()=>randomInt(0));});
+test('blackjack aces and bust',()=>{assert.equal(bj([c(14),c(14),c(9)]),21);assert.equal(bj([c(14),c(6)]),17);assert.equal(bj([c(14),c(6),c(10)]),17);assert.equal(bj([c(10),c(12),c(2)]),22);});
+test('poker category ordering and wheel',()=>{const hands=[[c(14),c(11,1),c(9,2),c(6),c(3)],[c(9),c(9,1),c(14),c(6),c(3)],[c(9),c(9,1),c(6,1),c(6),c(3)],[c(9),c(9,1),c(9,2),c(6),c(3)],[c(14),c(2,1),c(3),c(4),c(5)],[c(14),c(11),c(9),c(6),c(3)],[c(9),c(9,1),c(9,2),c(6),c(6,1)],[c(9),c(9,1),c(9,2),c(9,3),c(3)],[c(10),c(11),c(12),c(13),c(14)]];hands.forEach((h,i)=>{assert.equal(rank(h).category,i);if(i)assert.ok(rank(h).score>rank(hands[i-1]).score);});});
+test('seven card evaluator chooses full house from two triples and splits board',()=>{assert.equal(rank([c(14),c(14,1),c(14,2),c(13),c(13,1),c(13,2),c(2)]).category,6);const board=[c(10),c(11),c(12),c(13),c(14)];assert.equal(rank([...board,c(2,1),c(3,1)]).score,rank([...board,c(9,2),c(8,2)]).score);});
+test('roulette zero loses even money, straight pays including stake',()=>{for(const t of ['red','black','odd','even','low','high'])assert.equal(rouletteReturn(0,t,100,0),0);assert.equal(rouletteReturn(0,'number',100,0),3600);assert.equal(rouletteReturn(1,'red',100,0),200);assert.equal(rouletteReturn(1,'black',100,0),0);});
+test('baccarat naturals and banker third-card table',()=>{const rig=rs=>rs.map(r=>c(r)).reverse();assert.equal(baccarat(rig([4,2,4,3,8])).p.length,2);for(let bank=0;bank<=7;bank++)for(let third=0;third<=9;third++){const b=baccarat(rig([10,10,10,bank===0?10:bank,third===0?10:third,2]));const expected=bank<=2||(bank===3&&third!==8)||(bank===4&&third>=2&&third<=7)||(bank===5&&third>=4&&third<=7)||(bank===6&&third>=6&&third<=7);assert.equal(b.b.length,expected?3:2,`bank ${bank} third ${third}`);}});
+test('daily reset uses Tokyo midnight',()=>{assert.equal(tokyoDate(new Date('2026-09-12T14:59:59Z')),'2026-09-12');assert.equal(tokyoDate(new Date('2026-09-12T15:00:00Z')),'2026-09-13');});
