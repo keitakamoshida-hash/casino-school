@@ -1,0 +1,15 @@
+{
+  "id": "./",
+  "name": "CASINO SCHOOL",
+  "short_name": "CASINO SCHOOL",
+  "description": "遊んで、わかる。判断が、うまくなる。",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#101915",
+  "theme_color": "#101915",
+  "icons": [
+    {"src":"icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}

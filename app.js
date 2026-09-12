@@ -76,3 +76,4 @@ document.addEventListener('change',e=>{const {id,value,checked}=e.target;if(id==
 attachSqueeze(s,render,save);
 attachChipDrag(s,render,message=>{document.querySelector('#error').textContent=message;});
 render();
+if(typeof navigator!=='undefined'&&'serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
