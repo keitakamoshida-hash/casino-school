@@ -39,7 +39,10 @@ export function revealSqueeze(s,key,now=Date.now()) {
 }
 function card(c,hidden=false,extra='',style='') {return `<div class="experience-card ${hidden?'face-down':c.s===1||c.s===2?'face-red':''} ${extra}" style="${style}" ${hidden?'aria-label="裏向きのカード"':`aria-label="${suit[c.s]}${face(c)}"`}>${hidden?'<span class="card-emblem">♠</span>':`<span class="card-corner">${face(c)}<i>${suit[c.s]}</i></span><span class="card-suit">${suit[c.s]}</span><span class="card-corner bottom">${face(c)}<i>${suit[c.s]}</i></span>`}</div>`;}
 export function renderCards(cs,options={}){
- return `<div class="experience-cards ${options.rowClass||''}">${cs.map((c,i)=>{
+ const slots=options.slots||cs.length,offset=options.offset||0;
+ return `<div class="experience-cards ${options.rowClass||''}">${Array.from({length:slots},(_,slot)=>{
+   const i=slot-offset;if(i<0||i>=cs.length)return '<span class="card-slot" aria-hidden="true"></span>';
+   const c=cs[i];
    const age=options.arrivalAge?.(i),revealAge=options.revealAge?.(i);
    const arriving=Number.isFinite(age)&&age>=0&&age<350;
    const revealing=Number.isFinite(revealAge)&&revealAge>=0&&revealAge<350;
@@ -65,9 +68,13 @@ export function experienceTable(s,now=Date.now()) {
   if(e.action==='double'&&t<600)p=h.p.slice(0,2);
   return `<div class="experience-heading"><span class="eyebrow">BLACKJACK · LIVE TABLE</span><h2>${initial?'カードが、配られる。':e.dealerTurn?'ディーラーのターン。':'次の一枚は…'}</h2></div><div class="caption">DEALER</div>${renderBlackjackCards(d,{hidden:i=>i===1&&hideHole,arrivalAge:i=>initial?t-(420+i*840):e.dealerTurn&&i>=2?t-(1950+(i-2)*850):Infinity,revealAge:i=>i===1&&!hideHole?t-(initial?1750:650):Infinity})}<div class="table-divider"><span>BLACKJACK PAYS 3 TO 2</span></div><div class="caption">YOUR HAND</div>${renderBlackjackCards(p,{arrivalAge:i=>initial?t-i*840:i===h.p.length-1&&['hit','double'].includes(e.action)?t-(e.action==='double'?600:0):Infinity})}<div class="experience-status"><span class="status-light"></span>${initial?'一枚ずつ、手札を確かめよう。':e.dealerTurn?'伏せ札を開き、17以上になるまで引きます。':'カードを確認しています…'}</div>`;
  }
- const reveal=e.showdown&&t>900;
- const board=h.board.slice(0,e.previousBoard+Math.max(0,Math.floor(t/350)));
- return `<div class="experience-heading"><span class="eyebrow">TEXAS HOLD’EM · LIVE TABLE</span><h2>${e.showdown?'ショーダウン。':e.action==='start'?'勝負の、はじまり。':e.terminal?'勝負が、動いた。':'次のカードを待つ。'}</h2></div><div class="caption">CPU ${e.showdown?'· SHOWDOWN':''}</div>${renderCards(h.cpu,{hidden:()=>!reveal,animate:()=>reveal})}<div class="table-divider"><span>POT ${money(h.pot)} COINS</span></div>${board.length?renderCards(board,{animate:i=>i>=e.previousBoard}):'<div class="community-wait">FLOP · TURN · RIVER</div>'}<div class="caption">YOUR HAND</div>${renderCards(h.p,{hidden:i=>e.action==='start'&&t<i*500,animate:()=>e.action==='start'})}<div class="experience-status"><span class="status-light"></span>${e.showdown?'互いの手札を公開します。':e.terminal?'ベットを精算しています…':'CPUが判断しています…'}</div>`;
+ const dealing=e.action==='start',reveal=e.showdown&&t>=900;
+ const player=dealing?h.p.slice(0,Math.min(2,1+Math.floor(t/700))):h.p;
+ const cpu=dealing?h.cpu.slice(0,Math.max(0,Math.min(2,Math.floor((t-350)/700)+1))):h.cpu;
+ const boardCount=Math.min(h.board.length,e.previousBoard+Math.max(0,Math.floor(t/350)));
+ const board=h.board.slice(0,boardCount);
+ const stable={rowClass:'blackjack-row poker-row',slots:5,offset:1};
+ return `<div class="experience-heading"><span class="eyebrow">TEXAS HOLD’EM · LIVE TABLE</span><h2>${e.showdown?'ショーダウン。':dealing?'勝負の、はじまり。':e.terminal?'勝負が、動いた。':'次のカードを待つ。'}</h2></div><div class="caption">CPU ${e.showdown?'· SHOWDOWN':''}</div>${renderCards(cpu,{...stable,hidden:()=>!reveal,revealAge:i=>e.showdown?t-900:Infinity,arrivalAge:i=>dealing?t-(350+i*700):Infinity})}<div class="table-divider"><span>POT ${money(h.pot)} COINS</span></div>${board.length?renderCards(board,{rowClass:'blackjack-row poker-row',slots:5,arrivalAge:i=>i<e.previousBoard?Infinity:t-(i-e.previousBoard+1)*350}):'<div class="community-wait">FLOP · TURN · RIVER</div>'}<div class="caption">YOUR HAND</div>${renderCards(player,{...stable,arrivalAge:i=>dealing?t-i*700:Infinity})}<div class="experience-status"><span class="status-light"></span>${e.showdown?'互いの手札を公開します。':e.terminal?'ベットを精算しています…':'CPUが判断しています…'}</div>`;
 }
 export function attachSqueeze(s,render,save) {
  let drag=null;

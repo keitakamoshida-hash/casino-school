@@ -50,3 +50,14 @@ test('standing does not redeal player cards and dealer draw animates only its ne
  assert.equal((experienceTable(s,1950).match(/card-arrive/g)||[]).length,1);
  assert.equal((experienceTable(s,2400).match(/card-arrive/g)||[]).length,0);
 });
+
+test('poker deals into stable slots and animates only the newly arriving card',()=>{
+ const before={game:'poker',balance:10000,stake:1000,guide:true,active:{board:[]}};
+ const after={...before,active:{kind:'poker',p:[c(14),c(13)],cpu:[c(10),c(9)],board:[c(2),c(3),c(4)],pot:2000},balance:9000};
+ const s={...before};startExperience(s,before,after,'check',1000);
+ const at=ms=>experienceTable(s,1000+ms);
+ assert.equal((at(350).match(/poker-row/g)||[]).length,3);
+ assert.equal((at(350).match(/card-arrive/g)||[]).length,1);
+ assert.equal((at(700).match(/card-arrive/g)||[]).length,1);
+ assert.equal((at(1050).match(/card-arrive/g)||[]).length,1);
+});
