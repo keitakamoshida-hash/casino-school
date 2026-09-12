@@ -49,12 +49,12 @@ export function renderCards(cs,options={}){
 }
 export function renderBlackjackCards(cs,options={}){return renderCards(cs,{...options,rowClass:'blackjack-row'});}
 
-function squeezeCard(c,key,e,next){const revealed=e.revealed.includes(key);return `<button class="squeeze-card ${key===next?'ready-to-squeeze':''} ${revealed?'revealed':''}" data-squeeze="${key}" ${key!==next?'disabled':''} aria-label="${key.startsWith('p')?'Player':'Banker'}の${Number(key[1])+1}枚目${revealed?'、公開済み':'、上へスライドして絞る'}"><span class="squeeze-face" ${revealed?'':'aria-hidden="true"'}>${card(c)}</span>${revealed?'':`<span class="card-veil"><span class="card-emblem">♠</span><span class="squeeze-arrow">↑ ${key===next?'絞る':'WAIT'}</span></span><span class="card-fold"></span>`}</button>`;}
+function squeezeCard(c,key,e,next){const revealed=e.revealed.includes(key);return `<button class="squeeze-card ${key===next?'ready-to-squeeze':''} ${revealed?'revealed':''}" data-squeeze="${key}" ${key!==next?'disabled':''} aria-label="${key.startsWith('p')?'Player':'Banker'}の${Number(key[1])+1}枚目${revealed?'、公開済み':'、上または横へスライドして絞る'}"><span class="squeeze-face" ${revealed?'':'aria-hidden="true"'}>${card(c)}</span>${revealed?'':`<span class="card-veil"><span class="card-emblem">♠</span><span class="squeeze-arrow">↑ ↔ <b>絞る</b></span></span><span class="squeeze-edge top-edge">上からマークを見る</span><span class="squeeze-edge side-edge">横から見る</span><span class="card-fold"></span>`}</button>`;}
 export function experienceTable(s,now=Date.now()) {
  const e=s.experience,t=now-e.started,h=e.hand;
  if(e.kind==='baccarat'){
   const next=squeezeOrder(e).find(k=>!e.revealed.includes(k));
-  return `<div class="experience-heading"><span class="eyebrow">BACCARAT · SQUEEZE TABLE</span><h2>その一枚を、あなたの指で。</h2><p>${next?'光っているカードを上へゆっくりスライド。途中で止めて、少しずつ絞れます。':'全てのカードが開きました。勝負の行方は…'}</p></div><div class="baccarat-sides">${['p','b'].map(side=>`<div class="baccarat-side"><div class="caption">${side==='p'?'PLAYER':'BANKER'} <span class="hand-score">${h[side].every((_,i)=>e.revealed.includes(side+i))?score(h[side]):'?'}</span></div><div class="experience-cards">${(e.revealed.length>=4?h[side]:h[side].slice(0,2)).map((c,i)=>squeezeCard(c,side+i,e,next)).join('')}</div></div>`).join('')}</div><div class="experience-status"><span class="status-light"></span>${next?`${next.startsWith('p')?'PLAYER':'BANKER'} · ${Number(next[1])+1}枚目を絞る`:'勝負を判定しています…'}</div><div class="actions">${next?'<button data-act="reveal-card">1枚めくる</button><button data-act="reveal-all" class="quiet-button">まとめて開く</button>':''}</div><p class="experience-stake">BET ${money(e.after.stake)} COINS · ${e.after.bacTarget||'Player'}</p>`;
+  return `<div class="experience-heading"><span class="eyebrow">BACCARAT · SQUEEZE TABLE</span><h2>その一枚を、あなたの指で。</h2><p>${next?'カードを上へ引けば下の「足」が、横へ引けば端のマークが少しずつ覗きます。途中で止めて、じっくり絞れます。':'全てのカードが開きました。勝負の行方は…'}</p></div><div class="baccarat-sides">${['p','b'].map(side=>`<div class="baccarat-side"><div class="caption">${side==='p'?'PLAYER':'BANKER'} <span class="hand-score">${h[side].every((_,i)=>e.revealed.includes(side+i))?score(h[side]):'?'}</span></div><div class="experience-cards">${(e.revealed.length>=4?h[side]:h[side].slice(0,2)).map((c,i)=>squeezeCard(c,side+i,e,next)).join('')}</div></div>`).join('')}</div><div class="experience-status"><span class="status-light"></span>${next?`${next.startsWith('p')?'PLAYER':'BANKER'} · 上・横から ${Number(next[1])+1}枚目を絞る`:'勝負を判定しています…'}</div><div class="actions">${next?'<button data-act="reveal-card">1枚めくる</button><button data-act="reveal-all" class="quiet-button">まとめて開く</button>':''}</div><p class="experience-stake">BET ${money(e.after.stake)} COINS · ${e.after.bacTarget||'Player'}</p>`;
  }
  if(e.kind==='blackjack'){
   const initial=e.action==='start',dealCount=Math.min(4,1+Math.floor(t/420));
@@ -71,14 +71,15 @@ export function experienceTable(s,now=Date.now()) {
 }
 export function attachSqueeze(s,render,save) {
  let drag=null;
- const clear=()=>{if(drag){drag.el.style.setProperty('--peel','0%');drag=null;}};
+ const clear=()=>{if(drag){drag.el.style.setProperty('--peel-y','0%');drag.el.style.setProperty('--peel-x','0%');drag=null;}};
  document.addEventListener('pointerdown',ev=>{
   const el=ev.target.closest('[data-squeeze]');if(!el||el.disabled||ev.button!==0||ev.isPrimary===false)return;
-  drag={id:ev.pointerId,y:ev.clientY,el,progress:0};el.setPointerCapture(ev.pointerId);
+  drag={id:ev.pointerId,x:ev.clientX,y:ev.clientY,el,progress:0};el.setPointerCapture(ev.pointerId);
  });
  document.addEventListener('pointermove',ev=>{
   if(!drag||drag.id!==ev.pointerId)return;ev.preventDefault();
-  drag.progress=Math.min(1,Math.max(0,(drag.y-ev.clientY)/100));drag.el.style.setProperty('--peel',`${drag.progress*100}%`);
+  const vertical=Math.max(0,(drag.y-ev.clientY)/100),horizontal=Math.abs(drag.x-ev.clientX)/85;
+  drag.progress=Math.min(1,Math.max(vertical,horizontal));drag.el.style.setProperty('--peel-y',`${Math.min(1,vertical)*100}%`);drag.el.style.setProperty('--peel-x',`${Math.min(1,horizontal)*100}%`);
  },{passive:false});
  document.addEventListener('pointerup',ev=>{
   if(!drag||drag.id!==ev.pointerId)return;const {progress,el}=drag;clear();
