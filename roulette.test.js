@@ -1,11 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {initRoulette,SPOTS,WHEEL_ORDER,placeChip,undoChip,clearChips,repeatChips,totalBet,spotReturn,settleRoulette,rouletteTable} from './roulette.js';
+import {initRoulette,SPOTS,WHEEL_ORDER,placeChip,undoChip,clearChips,repeatChips,totalBet,spotReturn,settleRoulette,rouletteTable,startRouletteSpin} from './roulette.js';
 function wallet(balance=100000){const s={balance};initRoulette(s);return s;}
 test('mat covers all 37 wheel pockets and all supported betting groups',()=>{
   assert.equal(SPOTS.n0.multiplier,36);assert.equal(new Set(WHEEL_ORDER).size,37);
   assert.equal(Object.keys(SPOTS).length,49);
   const html=rouletteTable(wallet());assert.equal((html.match(/data-spot=/g)||[]).length,49);
+});
+test('a spin changes the visual priority from mat to wheel',()=>{
+  const s=wallet();placeChip(s,'n17',100);startRouletteSpin(s,17,1000);
+  assert.match(rouletteTable(s),/roulette-arena spin-focus/);
 });
 test('placing chips reserves funds; undo and clear return exactly the reserved amount',()=>{
   const s=wallet();placeChip(s,'n0',100);placeChip(s,'red',1000);placeChip(s,'red',500);
