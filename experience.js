@@ -37,8 +37,18 @@ export function revealSqueeze(s,key,now=Date.now()) {
   if(e.revealed.length===squeezeOrder(e).length)e.ends=now+1400;
   return true;
 }
-function card(c,hidden=false,extra='') {return `<div class="experience-card ${hidden?'face-down':c.s===1||c.s===2?'face-red':''} ${extra}" ${hidden?'aria-label="裏向きのカード"':`aria-label="${suit[c.s]}${face(c)}"`}>${hidden?'<span class="card-emblem">♠</span>':`<span class="card-corner">${face(c)}<i>${suit[c.s]}</i></span><span class="card-suit">${suit[c.s]}</span><span class="card-corner bottom">${face(c)}<i>${suit[c.s]}</i></span>`}</div>`;}
-export function renderCards(cs,options={}){return `<div class="experience-cards">${cs.map((c,i)=>card(c,options.hidden?.(i)||false,options.animate?.(i)?'card-arrive':'')).join('')}</div>`;}
+function card(c,hidden=false,extra='',style='') {return `<div class="experience-card ${hidden?'face-down':c.s===1||c.s===2?'face-red':''} ${extra}" style="${style}" ${hidden?'aria-label="裏向きのカード"':`aria-label="${suit[c.s]}${face(c)}"`}>${hidden?'<span class="card-emblem">♠</span>':`<span class="card-corner">${face(c)}<i>${suit[c.s]}</i></span><span class="card-suit">${suit[c.s]}</span><span class="card-corner bottom">${face(c)}<i>${suit[c.s]}</i></span>`}</div>`;}
+export function renderCards(cs,options={}){
+ return `<div class="experience-cards ${options.rowClass||''}">${cs.map((c,i)=>{
+   const age=options.arrivalAge?.(i),revealAge=options.revealAge?.(i);
+   const arriving=Number.isFinite(age)&&age>=0&&age<350;
+   const revealing=Number.isFinite(revealAge)&&revealAge>=0&&revealAge<350;
+   const animation=arriving?'card-arrive':revealing?'card-reveal':options.animate?.(i)?'card-arrive':'';
+   return card(c,options.hidden?.(i)||false,animation,arriving||revealing?`animation-delay:-${arriving?age:revealAge}ms`:'');
+ }).join('')}</div>`;
+}
+export function renderBlackjackCards(cs,options={}){return renderCards(cs,{...options,rowClass:'blackjack-row'});}
+
 function squeezeCard(c,key,e,next){const revealed=e.revealed.includes(key);return `<button class="squeeze-card ${key===next?'ready-to-squeeze':''} ${revealed?'revealed':''}" data-squeeze="${key}" ${key!==next?'disabled':''} aria-label="${key.startsWith('p')?'Player':'Banker'}の${Number(key[1])+1}枚目${revealed?'、公開済み':'、上へスライドして絞る'}"><span class="squeeze-face" ${revealed?'':'aria-hidden="true"'}>${card(c)}</span>${revealed?'':`<span class="card-veil"><span class="card-emblem">♠</span><span class="squeeze-arrow">↑ ${key===next?'絞る':'WAIT'}</span></span><span class="card-fold"></span>`}</button>`;}
 export function experienceTable(s,now=Date.now()) {
  const e=s.experience,t=now-e.started,h=e.hand;
@@ -53,7 +63,7 @@ export function experienceTable(s,now=Date.now()) {
   let p=h.p,d=h.d.slice(0,dealerCount);
   if(initial){p=h.p.slice(0,dealCount>=3?2:1);d=h.d.slice(0,dealCount>=4?2:dealCount>=2?1:0);}
   if(e.action==='double'&&t<600)p=h.p.slice(0,2);
-  return `<div class="experience-heading"><span class="eyebrow">BLACKJACK · LIVE TABLE</span><h2>${initial?'カードが、配られる。':e.dealerTurn?'ディーラーのターン。':'次の一枚は…'}</h2></div><div class="caption">DEALER</div>${renderCards(d,{hidden:i=>i===1&&hideHole,animate:i=>i===d.length-1})}<div class="table-divider"><span>BLACKJACK PAYS 3 TO 2</span></div><div class="caption">YOUR HAND</div>${renderCards(p,{animate:i=>i===p.length-1})}<div class="experience-status"><span class="status-light"></span>${initial?'一枚ずつ、手札を確かめよう。':e.dealerTurn?'伏せ札を開き、17以上になるまで引きます。':'カードを確認しています…'}</div>`;
+  return `<div class="experience-heading"><span class="eyebrow">BLACKJACK · LIVE TABLE</span><h2>${initial?'カードが、配られる。':e.dealerTurn?'ディーラーのターン。':'次の一枚は…'}</h2></div><div class="caption">DEALER</div>${renderBlackjackCards(d,{hidden:i=>i===1&&hideHole,arrivalAge:i=>initial?t-(420+i*840):e.dealerTurn&&i>=2?t-(1950+(i-2)*850):Infinity,revealAge:i=>i===1&&!hideHole?t-(initial?1750:650):Infinity})}<div class="table-divider"><span>BLACKJACK PAYS 3 TO 2</span></div><div class="caption">YOUR HAND</div>${renderBlackjackCards(p,{arrivalAge:i=>initial?t-i*840:i===h.p.length-1&&['hit','double'].includes(e.action)?t-(e.action==='double'?600:0):Infinity})}<div class="experience-status"><span class="status-light"></span>${initial?'一枚ずつ、手札を確かめよう。':e.dealerTurn?'伏せ札を開き、17以上になるまで引きます。':'カードを確認しています…'}</div>`;
  }
  const reveal=e.showdown&&t>900;
  const board=h.board.slice(0,e.previousBoard+Math.max(0,Math.floor(t/350)));

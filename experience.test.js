@@ -24,3 +24,29 @@ test('dealer draws and poker showdown delay final outcomes',()=>{
  const after={...before,balance:11000,active:null,lastHand:{kind:'blackjack',p:[c(10),c(9)],d:[c(2),c(3),c(4),c(10)],bet:1000}};
  const s={...before};startExperience(s,before,after,'stand',0);assert.equal(s.balance,9000);assert.match(experienceTable(s,500),/ディーラーのターン/);assert.equal(s.experience.dealerTurn,true);finishExperience(s,10000);assert.equal(s.balance,11000);
 });
+
+test('blackjack only animates newly dealt cards and resumes animation age on redraw',()=>{
+ const before={game:'blackjack',balance:10000,stake:1000,guide:true};
+ const after={...before,balance:9000,active:{kind:'blackjack',p:[c(10),c(8)],d:[c(9),c(7)],bet:1000}};
+ const s={...before};startExperience(s,before,after,'start',1000);
+ const at=ms=>experienceTable(s,1000+ms);
+ assert.equal((at(0).match(/card-arrive/g)||[]).length,1);
+ assert.equal((at(420).match(/card-arrive/g)||[]).length,1);
+ assert.equal((at(600).match(/card-arrive/g)||[]).length,1);
+ assert.match(at(600),/animation-delay:-180ms/);
+ assert.equal((at(840).match(/card-arrive/g)||[]).length,1);
+ assert.equal((at(1260).match(/card-arrive/g)||[]).length,1);
+ assert.equal((at(1750).match(/card-arrive/g)||[]).length,0);
+ assert.equal((at(1750).match(/blackjack-row/g)||[]).length,2);
+});
+
+test('standing does not redeal player cards and dealer draw animates only its new card',()=>{
+ const before={game:'blackjack',balance:9000,stake:1000,guide:true,active:{bet:1000}};
+ const after={...before,balance:9000,active:null,lastHand:{kind:'blackjack',p:[c(10),c(8)],d:[c(10),c(6),c(3)],bet:1000}};
+ const s={...before};startExperience(s,before,after,'stand',0);
+ assert.equal((experienceTable(s,600).match(/card-arrive/g)||[]).length,0);
+ assert.equal((experienceTable(s,650).match(/card-reveal/g)||[]).length,1);
+ assert.equal((experienceTable(s,1100).match(/card-reveal/g)||[]).length,0);
+ assert.equal((experienceTable(s,1950).match(/card-arrive/g)||[]).length,1);
+ assert.equal((experienceTable(s,2400).match(/card-arrive/g)||[]).length,0);
+});
